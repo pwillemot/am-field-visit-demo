@@ -9594,8 +9594,7 @@ var HOME_DAYS={
   '0':{groups:[
     {label:'Upcoming',visits:[
       {acct:'Meridian Infrastructure',logo:'AH',grad:'linear-gradient(135deg,#b23b3b,#e05656)',pri:'priority-high',purpose:'Sales Agreement QBR · FY26 Volume Review',time:'11:00 AM – 1:00 PM',dist:'12.4 km',target:'detail'},
-      {acct:'BESIX Group',logo:'BG',grad:'linear-gradient(135deg,#c77a12,#fe9339)',pri:'priority-medium',purpose:'Equipment & Safety Audit · Plant 3',time:'2:00 – 4:00 PM',dist:'28.7 km',target:'detail'},
-      {acct:'Galère',logo:'GA',grad:'linear-gradient(135deg,#6d3bd4,#9050e9)',pri:'priority-purple',purpose:'New Distributor Onboarding',time:'5:00 – 6:00 PM',dist:'42.1 km',target:'detail'}
+      {acct:'BESIX Group',logo:'BG',grad:'linear-gradient(135deg,#c77a12,#fe9339)',pri:'priority-medium',purpose:'Equipment & Safety Audit · Plant 3',time:'2:00 – 4:00 PM',dist:'28.7 km',target:'detail'}
     ]}
   ]},
   '1':{groups:[{label:'Upcoming',visits:[
@@ -9644,17 +9643,49 @@ var OMEGA_COMPLETED_CARD='<div class="mfg-visit-card" data-status="completed" on
   +'<div class="mfg-visit-meta"><span class="mfg-visit-time"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"><path d="M6.67 1.33H9.33"/><path d="M8 9.33 10 7.33"/><circle cx="8" cy="9.33" r="5.33"/></svg>11:00 AM – 1:00 PM</span><span class="mfg-visit-dist"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.33"/><path d="M5.5 8 7.2 9.7 10.7 6"/></svg>5 of 5 tasks</span></div>'
   +'<div class="m-visit-pill"><button class="m-pin-btn" style="border-right:none;" onclick="event.stopPropagation();openVisitShareSheet(\'Meridian Infrastructure\');" title="Share" aria-label="Share visit summary">'+SHARE_BTN_SVG+'</button></div>'
   +'</div>';
+/* Completed card for Galère — now a finished afternoon-earlier visit (demo moved it
+   to Completed so only Meridian + BESIX remain Upcoming). */
+var GALERE_COMPLETED_CARD='<div class="mfg-visit-card" data-status="completed" onclick="openCompletedVisit()">'
+  +'<div class="m-dealer-logo avtint-purple">GA</div>'
+  +'<div class="mfg-visit-info"><div class="mfg-visit-account">Galère</div><div class="mfg-visit-purpose">New Distributor Onboarding</div><div class="mfg-visit-address">Liège, BE</div></div>'
+  +'<div class="mfg-visit-meta"><span class="mfg-visit-time"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"><path d="M6.67 1.33H9.33"/><path d="M8 9.33 10 7.33"/><circle cx="8" cy="9.33" r="5.33"/></svg>5 of 5 tasks</span></div>'
+  +'<div class="m-visit-pill"><button class="m-pin-btn" style="border-right:none;" onclick="event.stopPropagation();openVisitShareSheet(\'Galère\');" title="Share" aria-label="Share visit summary">'+SHARE_BTN_SVG+'</button></div>'
+  +'</div>';
+/* Dynamic schedule for today's two Upcoming visits, anchored to the real current time.
+   Meeting 1 starts at the next full hour (30 min); meeting 2 two hours later (1 hour).
+   e.g. now 8:xx PM -> 9:00–9:30 PM and 11:00 PM–12:00 AM. */
+function _homeFmtTime(d){
+  var h=d.getHours(),m=d.getMinutes();var ap=h>=12?'PM':'AM';var h12=h%12;if(h12===0)h12=12;
+  return h12+(m?':'+(m<10?'0'+m:m):'')+' '+ap;
+}
+function homeDynamicTimes(){
+  var now=new Date();
+  var s1=new Date(now);s1.setMinutes(0,0,0);s1.setHours(now.getHours()+1); /* next full hour */
+  var e1=new Date(s1.getTime()+30*60000);                                   /* +30 min */
+  var s2=new Date(s1.getTime()+2*60*60000);                                 /* +2 h */
+  var e2=new Date(s2.getTime()+60*60000);                                   /* +1 h */
+  return {m1:_homeFmtTime(s1)+' – '+_homeFmtTime(e1), m2:_homeFmtTime(s2)+' – '+_homeFmtTime(e2)};
+}
 /* Completed section = section label + the completed cards. Meridian Infrastructure joins the top of
-   the list once its visit is finished (demoOmegaDone). */
+   the list once its visit is finished (demoOmegaDone). Galère is always completed. */
 function homeCompletedSectionHTML(){
   return '<div class="mfg-section-label" style="margin-top:4px;">Completed</div>'
-    +'<div class="mfg-visit-cards">'+(demoOmegaDone?OMEGA_COMPLETED_CARD:'')+FRONTIER_COMPLETED_CARD+'</div>';
+    +'<div class="mfg-visit-cards">'+(demoOmegaDone?OMEGA_COMPLETED_CARD:'')+GALERE_COMPLETED_CARD+FRONTIER_COMPLETED_CARD+'</div>';
 }
 function renderHomeDay(){
   var lbl=document.getElementById('homeDayLabel');if(lbl)lbl.textContent=homeDateLabel(homeDayOffset);
   var pill=document.getElementById('homeTodayPill');if(pill)pill.classList.toggle('away',homeDayOffset!==0);
   var day=HOME_DAYS[String(homeDayOffset)];
   var groups=day?day.groups:[];
+  /* On today, stamp the two Upcoming visits with live times (next full hour, +2h). */
+  if(homeDayOffset===0){
+    var dt=homeDynamicTimes();
+    groups=groups.map(function(g){return {label:g.label,visits:g.visits.map(function(v){
+      if(v.acct==='Meridian Infrastructure')return Object.assign({},v,{time:dt.m1});
+      if(v.acct==='BESIX Group')return Object.assign({},v,{time:dt.m2});
+      return v;
+    })};});
+  }
   /* On today, once the Meridian Infrastructure visit is completed, drop it from its scheduled
      group so it only appears in the Completed section below. */
   if(homeDayOffset===0&&demoOmegaDone){
