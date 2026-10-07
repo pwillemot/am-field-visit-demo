@@ -11425,10 +11425,6 @@ function vrSyncToSalesforce(noteText){
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify(payload)
-    }).then(function(r){return r.json();}).then(function(res){
-      if(res&&res.success&&typeof showToast==='function'){
-        showToast('Synced to Salesforce','Visit report '+(res.id?'created':'saved')+' in CRM.','');
-      }
     }).catch(function(){/* demo-safe: ignore network/CORS errors */});
   }catch(e){/* never let a sync error break the demo */}
 }
