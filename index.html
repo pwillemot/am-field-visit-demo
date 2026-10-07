@@ -11389,7 +11389,48 @@ function vrFinishProj(){
   }
   /* follow-up-task check deferred from noteEditSave */
   if(_vrPendingNoteText&&NOTE_TASK_TRIGGER.test(_vrPendingNoteText))c360AddTaskFromNote();
+  /* 3) also create a REAL LPE_Visit_Report__c in Salesforce (fire-and-forget) */
+  vrSyncToSalesforce(_vrPendingNoteText);
   _vrPendingNoteText='';
+}
+
+/* ================================================================
+   Sync the completed visit report to a real Salesforce record.
+   Fire-and-forget + fully guarded: any failure (offline, CORS,
+   endpoint down) is swallowed so the demo UI is never affected.
+   Endpoint = public Force.com Site guest Apex REST in the
+   arcelormittal org (object LPE_Visit_Report__c).
+   ================================================================ */
+var VR_SF_ENDPOINT="https://storm-e6c6f5f9581458.my.salesforce-sites.com/visitintake/services/apexrest/visitreport";
+/* The demo visit is the Meridian Infrastructure call; link the real report to the
+   matching "Meridian - Kirchberg Underground Car Park" opportunity so it shows on
+   the opp (and, through it, the account) in Salesforce. */
+var VR_SF_OPPORTUNITY_ID="006Kj000017zTmuIAE";
+function vrSyncToSalesforce(noteText){
+  try{
+    if(typeof fetch!=='function')return;
+    var types=[];
+    for(var i=0;i<_vrSelected.length;i++){
+      types.push({type:_vrSelected[i],trend:_vrTrends[_vrSelected[i]]||''});
+    }
+    var payload={
+      name:'Field visit — '+_noteTime(),
+      notes:noteText||'',
+      status:'Completed',
+      typeOfVisit:'On Site',
+      opportunityId:VR_SF_OPPORTUNITY_ID,
+      projectTypes:types
+    };
+    fetch(VR_SF_ENDPOINT,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    }).then(function(r){return r.json();}).then(function(res){
+      if(res&&res.success&&typeof showToast==='function'){
+        showToast('Synced to Salesforce','Visit report '+(res.id?'created':'saved')+' in CRM.','');
+      }
+    }).catch(function(){/* demo-safe: ignore network/CORS errors */});
+  }catch(e){/* never let a sync error break the demo */}
 }
 
 /* Add / refresh a "Project Types Presented" card just above the Notes card in the

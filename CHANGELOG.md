@@ -51,3 +51,32 @@ and `VR_TRENDS`. Hooked from `noteEditSave()`.
 Reverted the "Generate structured report" button + Visit Report Agent code that had been
 added by mistake to `Long SIC/SIC-usecases-site/index.html`. That page's UC03 is back to
 its original "▶ Play visit report" talk track. (That folder is not a git repo — local only.)
+
+## 6. Real Salesforce write on save
+Completing a visit report now also creates a **real `LPE_Visit_Report__c`** record in the
+`arcelormittal` org (`arcelor-mittal-ne9v6w`), in addition to the in-page simulation.
+
+- **App:** `vrSyncToSalesforce()` (called from `vrFinishProj`) does a **fire-and-forget,
+  fully guarded** `fetch` POST to a public endpoint. Any failure (offline / CORS / endpoint
+  down) is silently swallowed — the demo UI behaves exactly as before. On success it shows a
+  "Synced to Salesforce" toast. Endpoint in `VR_SF_ENDPOINT`.
+- **Payload:** `{name, notes, status:'Completed', projectTypes:[{type,trend}]}` — the 9 SSP
+  project-type labels + 5 trend values map 1:1 onto the object's `SSP_*__c` booleans and
+  `SSP_*_Trend__c` picklists.
+- **Org side (in `Long SIC/sfdx/`):**
+  - `VisitReportIntake` global `@RestResource` (`/services/apexrest/visitreport`), inserts in
+    `AccessLevel.SYSTEM_MODE`. `Name` is Auto Number so it's never set; any title is prefixed
+    into `Notes__c`.
+  - Classic Force.com Site **`VisitIntake`** (`/visitintake`) exposes it unauthenticated.
+  - Permission set **`Visit_Report_Intake_Guest`** grants the Site guest user Apex + Create.
+  - `CorsWhitelistOrigin` **`pwillemot_github_io`** allowlists `https://pwillemot.github.io`.
+- Open endpoint (no auth / no secret) by design — fine for this short-lived demo org.
+
+### 6a. Linked to the Meridian opportunity + account
+The created report is now linked to the **"Meridian - Kirchberg Underground Car Park"**
+opportunity (`VR_SF_OPPORTUNITY_ID` = `006Kj000017zTmuIAE`) — the object has no direct
+Account lookup, so Account is reached through `Opportunity__c`. The report shows on that
+opp's related list (and thus under Meridian Infrastructure). Payload also sends
+`typeOfVisit:'On Site'`. `VisitReportIntake` gained optional `opportunityId`, `typeOfVisit`,
+and `purpose` handling. (Only fields the app genuinely has are sent — products/satisfaction
+are left blank rather than fabricated.)
