@@ -58,8 +58,10 @@ Completing a visit report now also creates a **real `LPE_Visit_Report__c`** reco
 
 - **App:** `vrSyncToSalesforce()` (called from `vrFinishProj`) does a **fire-and-forget,
   fully guarded** `fetch` POST to a public endpoint. Any failure (offline / CORS / endpoint
-  down) is silently swallowed — the demo UI behaves exactly as before. On success it shows a
-  "Synced to Salesforce" toast. Endpoint in `VR_SF_ENDPOINT`.
+  down) is silently swallowed — the demo UI behaves exactly as before. The write is fully
+  **silent** (no toast/popup — the earlier "Synced to Salesforce" toast was removed because
+  its close button was unreachable on the completion screen and the confirmation wasn't
+  needed). Endpoint in `VR_SF_ENDPOINT`.
 - **Payload:** `{name, notes, status:'Completed', projectTypes:[{type,trend}]}` — the 9 SSP
   project-type labels + 5 trend values map 1:1 onto the object's `SSP_*__c` booleans and
   `SSP_*_Trend__c` picklists.
@@ -80,3 +82,11 @@ opp's related list (and thus under Meridian Infrastructure). Payload also sends
 `typeOfVisit:'On Site'`. `VisitReportIntake` gained optional `opportunityId`, `typeOfVisit`,
 and `purpose` handling. (Only fields the app genuinely has are sent — products/satisfaction
 are left blank rather than fabricated.)
+
+### 6b. Local testing + cleanup
+Tested locally before publishing by serving the folder at `http://localhost:8000` and
+temporarily adding that origin to the org CORS allowlist. After verifying, the
+`localhost_8000` CORS entry was **removed** from both the org and `Long SIC/sfdx/` — only
+`https://pwillemot.github.io` remains trusted. The local test server was stopped.
+
+**Published** to `master` (GitHub Pages) — live at the URL above.
